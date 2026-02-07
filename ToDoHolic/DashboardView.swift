@@ -4,20 +4,20 @@ struct DashboardView: View {
     // State to control the visibility of the "Add Task" pop-up
     @State private var showingAddTask = false
     
-    // 2-column grid layout for the category cards [cite: 96]
+    // 2-column grid layout for the category cards
     let columns = [
         GridItem(.flexible(), spacing: 16),
         GridItem(.flexible(), spacing: 16)
     ]
     
     var body: some View {
-        // ZStack allows the "+" button to float on top of the ScrollView [cite: 97, 141]
+        // ZStack allows the "+" button to float on top
         ZStack(alignment: .bottomTrailing) {
             
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     
-                    // Header Section matches "Your Tasks" mockup [cite: 143]
+                    // Header Section
                     HStack {
                         Text("Your Tasks")
                             .font(.system(size: 34, weight: .bold))
@@ -30,21 +30,21 @@ struct DashboardView: View {
                     }
                     .padding(.top, 20)
                     
-                    // The Grid of Categories showing task counts [cite: 98, 141]
+                    // Grid of Categories showing task counts
                     LazyVGrid(columns: columns, spacing: 16) {
-                        // NavigationLink connects the 'Work' card to the Task List [cite: 99]
+                        // Work category links to task list
                         NavigationLink(destination: TaskListView(categoryName: "Work")) {
                             CategoryCard(emoji: "💼", title: "Work", count: 5, subtitle: "2 overdue")
                         }
                         .buttonStyle(PlainButtonStyle())
-                        //Dummy cards for other categories - these can be replaced with dynamic data later [cite: 98, 141]
+                        // TODO: Make these other categories clickable too
                         CategoryCard(emoji: "📚", title: "Study", count: 3, subtitle: "Next: Physics")
                         CategoryCard(emoji: "🏠", title: "Home", count: 4, subtitle: "Groceries")
                         CategoryCard(emoji: "✈️", title: "Travel", count: 0, subtitle: "No tasks")
                         CategoryCard(emoji: "🎵", title: "Music", count: 0, subtitle: "No tasks")
                     }
                     
-                    // "Today" Section placeholder [cite: 162, 163]
+                    // "Today" Section - will add real tasks later
                     VStack(alignment: .leading, spacing: 12) {
                         Text("TODAY")
                             .font(.caption)
@@ -66,7 +66,7 @@ struct DashboardView: View {
                 .padding()
             }
             
-            // Floating Action Button (+) as specified in your requirements [cite: 97, 164]
+            // Floating + button to add new tasks
             Button(action: {
                 showingAddTask = true // Triggers the AddTaskView pop-up
             }) {
@@ -82,15 +82,14 @@ struct DashboardView: View {
             .padding(.bottom, 25)
         }
         .background(Color(UIColor.systemGroupedBackground))
-        .navigationBarBackButtonHidden(true) // Prevents going back to Welcome screen [cite: 89]
-        // Triggers the "Add New Task" screen as a modal sheet [cite: 102, 106]
+        .navigationBarBackButtonHidden(true)
         .sheet(isPresented: $showingAddTask) {
             AddTaskView()
         }
     }
 }
 
-// Reusable component for the Category Grid Cards [cite: 96, 141]
+// Card component for each category
 struct CategoryCard: View {
     let emoji: String
     let title: String
@@ -115,7 +114,6 @@ struct CategoryCard: View {
                 Text(subtitle)
                     .font(.caption)
                     .fontWeight(.medium)
-                    // Visual indicator for overdue tasks [cite: 85, 86, 111]
                     .foregroundColor(subtitle.contains("overdue") ? .red : .secondary)
             }
         }
@@ -127,7 +125,6 @@ struct CategoryCard: View {
     }
 }
 
-// Preview provider for older Xcode versions
 struct DashboardView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationView {

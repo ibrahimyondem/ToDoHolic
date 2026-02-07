@@ -28,12 +28,12 @@ struct TaskListView: View {
                 TaskRow(title: "Send Invoice #1024", time: "Done at 9:15 AM", isCompleted: true)
             }
         }
-        .navigationTitle(categoryName) // Sets title to "Work", "Study", etc.
-        .listStyle(InsetGroupedListStyle()) // Gives it that modern iOS rounded look
+        .navigationTitle(categoryName)
+        .listStyle(InsetGroupedListStyle())
     }
 }
 
-// Reusable row for each task to keep code clean [cite: 23]
+// Row component for individual tasks
 struct TaskRow: View {
     let title: String
     let time: String
