@@ -6,88 +6,125 @@
 //
 
 import SwiftUI
+import CoreData
 
 struct AddTaskView: View {
-    // We use @Environment to allow the "X" button to close this screen
-    @Environment(\.presentationMode) var presentationMode
-    
+    @Environment(\.managedObjectContext) private var viewContext
+    @Environment(\.dismiss) private var dismiss
+
     @State private var taskTitle: String = ""
-    @State private var selectedDate = Date()
-    @State private var selectedCategory = "Work"
-    
+    @State private var dueDate: Date = Date()
+    @State private var selectedCategory: String = "Work"
+    @State private var showingValidationAlert: Bool = false
+
     let categories = ["Work", "Study", "Home", "Travel"]
-    
+
+    private func emoji(for category: String) -> String {
+        switch category {
+        case "Work":   return "💼"
+        case "Study":  return "📚"
+        case "Home":   return "🏠"
+        case "Travel": return "✈️"
+        default:       return "📌"
+        }
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            // Header with Close Button
-            HStack {
-                Button(action: { presentationMode.wrappedValue.dismiss() }) {
-                    Image(systemName: "xmark")
-                        .font(.title2)
-                        .foregroundColor(.gray)
+        NavigationView {
+            Form {
+                Section(header: Text("Task Details")) {
+                    TextField("Task title", text: $taskTitle)
+                        .autocapitalization(.sentences)
                 }
-                Spacer()
-                Text("New Task")
-                    .font(.headline)
-                Spacer()
-                // Empty view to balance the header
-                Color.clear.frame(width: 20, height: 20)
+
+                Section(header: Text("Due Date")) {
+                    DatePicker(
+                        "Select date",
+                        selection: $dueDate,
+                        displayedComponents: [.date, .hourAndMinute]
+                    )
+                    .datePickerStyle(.compact)
+                }
+
+                Section(header: Text("Category")) {
+                    Picker("Category", selection: $selectedCategory) {
+                        ForEach(categories, id: \.self) { cat in
+                            Text(cat).tag(cat)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+
+                    HStack {
+                        Spacer()
+                        Text(emoji(for: selectedCategory))
+                            .font(.largeTitle)
+                        Spacer()
+                    }
+                    .padding(.vertical, 4)
+                }
+
+                Section {
+                    Button(action: saveTask) {
+                        HStack {
+                            Spacer()
+                            Text("Create Task")
+                                .bold()
+                                .foregroundColor(.white)
+                            Spacer()
+                        }
+                        .padding(.vertical, 8)
+                        .background(taskTitle.trimmingCharacters(in: .whitespaces).isEmpty ? Color.gray : Color.blue)
+                        .cornerRadius(10)
+                    }
+                    .disabled(taskTitle.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .listRowInsets(EdgeInsets())
+                    .padding(.horizontal)
+                }
             }
-            .padding(.bottom, 10)
-            
-            // Task Title Input
-            Text("What are you planning?")
-                .font(.title2)
-                .fontWeight(.bold)
-                .foregroundColor(.gray)
-            
-            TextField("Enter task title", text: $taskTitle)
-                .font(.title)
-                .fontWeight(.bold)
-            
-            Divider()
-            
-            // Date Picker
-            DatePicker("Date & Time", selection: $selectedDate)
-                .datePickerStyle(CompactDatePickerStyle())
-                .font(.headline)
-            
-            // Category Selection
-            Text("CATEGORY")
-                .font(.caption)
-                .fontWeight(.bold)
-                .foregroundColor(.secondary)
-            
-            HStack {
-                ForEach(categories, id: \.self) { category in
-                    Button(action: { selectedCategory = category }) {
-                        Text(category)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .background(selectedCategory == category ? Color.blue : Color.gray.opacity(0.1))
-                            .foregroundColor(selectedCategory == category ? .white : .primary)
-                            .cornerRadius(10)
+            .navigationTitle("New Task")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
                     }
                 }
             }
-            
-            Spacer()
-            
-            // Create Task Button
-            Button(action: {
-                // TODO: Save task to Core Data here
-                presentationMode.wrappedValue.dismiss()
-            }) {
-                Text("Create Task →")
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(taskTitle.isEmpty ? Color.gray : Color.blue)
-                    .cornerRadius(15)
+            .alert("Missing Title", isPresented: $showingValidationAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Please enter a title for your task before saving.")
             }
-            .disabled(taskTitle.isEmpty)
         }
-        .padding(30)
     }
+
+    private func saveTask() {
+        let trimmedTitle = taskTitle.trimmingCharacters(in: .whitespaces)
+        guard !trimmedTitle.isEmpty else {
+            showingValidationAlert = true
+            return
+        }
+
+        let newTask = TaskItem(context: viewContext)
+        newTask.id = UUID()
+        newTask.title = trimmedTitle
+        newTask.dueDate = dueDate
+        newTask.category = selectedCategory
+        newTask.isCompleted = false
+
+        do {
+            try viewContext.save()
+            dismiss()
+        } catch {
+            print("Core Data save error: \(error.localizedDescription)")
+        }
+    }
+}
+
+#Preview {
+    AddTaskView()
+        .environment(
+            \.managedObjectContext,
+            PersistenceController(inMemory: true).container.viewContext
+        )
 }
