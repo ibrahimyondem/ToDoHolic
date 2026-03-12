@@ -30,18 +30,27 @@ struct DashboardView: View {
                     }
                     .padding(.top, 20)
                     
-                    // Grid of Categories showing task counts
                     LazyVGrid(columns: columns, spacing: 16) {
-                        // Work category links to task list
-                        NavigationLink(destination: TaskListView(categoryName: "Work")) {
+                        NavigationLink(destination: TaskListView(filterCategory: "Work")) {
                             CategoryCard(emoji: "💼", title: "Work", count: 5, subtitle: "2 overdue")
                         }
                         .buttonStyle(PlainButtonStyle())
-                        // TODO: Make these other categories clickable too
-                        CategoryCard(emoji: "📚", title: "Study", count: 3, subtitle: "Next: Physics")
-                        CategoryCard(emoji: "🏠", title: "Home", count: 4, subtitle: "Groceries")
-                        CategoryCard(emoji: "✈️", title: "Travel", count: 0, subtitle: "No tasks")
-                        CategoryCard(emoji: "🎵", title: "Music", count: 0, subtitle: "No tasks")
+                        NavigationLink(destination: TaskListView(filterCategory: "Study")) {
+                            CategoryCard(emoji: "📚", title: "Study", count: 3, subtitle: "Next: Physics")
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        NavigationLink(destination: TaskListView(filterCategory: "Home")) {
+                            CategoryCard(emoji: "🏠", title: "Home", count: 4, subtitle: "Groceries")
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        NavigationLink(destination: TaskListView(filterCategory: "Travel")) {
+                            CategoryCard(emoji: "✈️", title: "Travel", count: 0, subtitle: "No tasks")
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        NavigationLink(destination: TaskListView(filterCategory: "Music")) {
+                            CategoryCard(emoji: "🎵", title: "Music", count: 0, subtitle: "No tasks")
+                        }
+                        .buttonStyle(PlainButtonStyle())
                     }
                     
                     // "Today" Section - will add real tasks later
