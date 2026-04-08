@@ -3,6 +3,7 @@ import SwiftUI
 import CoreData
 
 struct DashboardView: View {
+    @AppStorage("userName") private var userName: String = ""
     @Environment(\.managedObjectContext) private var viewContext
     @State private var showingAddTask = false
 
@@ -39,9 +40,16 @@ struct DashboardView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     HStack {
-                        Text("Your Tasks")
-                            .font(.system(size: 34, weight: .bold))
-                            .tracking(-1)
+                        VStack(alignment: .leading, spacing: 4) {
+                            if !userName.isEmpty {
+                                Text("Hi, \(userName)")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
+                            Text("Your Tasks")
+                                .font(.system(size: 34, weight: .bold))
+                                .tracking(-1)
+                        }
                         Spacer()
                         Image(systemName: "person.circle")
                             .font(.title)
@@ -148,7 +156,7 @@ struct DashboardView: View {
     }
 }
 
-// CategoryCard — unchanged from your original
+// CategoryCard — unchanged from original, but moved here for better organization
 struct CategoryCard: View {
     let emoji: String
     let title: String

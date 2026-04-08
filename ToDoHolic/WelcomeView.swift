@@ -4,8 +4,12 @@ import SwiftUI
 //Welcome Screen
 
 struct WelcomeView: View {
-    
+    @AppStorage("userName") private var storedName: String = ""
     @State private var name: String = ""
+    
+    private var trimmedName: String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
     
     var body: some View {
         NavigationView{
@@ -37,13 +41,21 @@ struct WelcomeView: View {
                         .fontWeight(.bold)
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(name.isEmpty ? Color.gray : Color.blue)
+                        .background(trimmedName.isEmpty ? Color.gray : Color.blue)
                         .foregroundColor(.white)
                         .cornerRadius(15)
                 }
-                .disabled(name.isEmpty)
+                .simultaneousGesture(TapGesture().onEnded {
+                    storedName = trimmedName
+                })
+                .disabled(trimmedName.isEmpty)
             }
             .padding(30)
+            .onAppear {
+                if name.isEmpty {
+                    name = storedName
+                }
+            }
         }
         }
         
