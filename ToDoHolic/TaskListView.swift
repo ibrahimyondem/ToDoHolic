@@ -10,6 +10,8 @@ import CoreData
 
 struct TaskListView: View {
     @Environment(\.managedObjectContext) private var viewContext
+    @State private var selectedTaskForEdit: TaskItem?
+    @State private var showingEditTask = false
 
     @FetchRequest(
         sortDescriptors: [NSSortDescriptor(keyPath: \TaskItem.dueDate, ascending: true)],
@@ -62,6 +64,11 @@ struct TaskListView: View {
         }
         .navigationTitle(filterCategory ?? "All Tasks")
         .navigationBarTitleDisplayMode(.large)
+        .sheet(isPresented: $showingEditTask) {
+            if let task = selectedTaskForEdit {
+                EditTaskView(task: task)
+            }
+        }
     }
 
     private var emptyStateView: some View {
@@ -85,7 +92,7 @@ struct TaskListView: View {
             if !overdueTasks.isEmpty {
                 Section {
                     ForEach(overdueTasks, id: \.objectID) { task in
-                        TaskRowView(task: task, onToggle: toggleCompletion)
+                        TaskRowView(task: task, onToggle: toggleCompletion, onEdit: startEditing)
                     }
                     .onDelete { offsets in
                         deleteTasks(from: overdueTasks, at: offsets)
@@ -100,7 +107,7 @@ struct TaskListView: View {
             if !todayTasks.isEmpty {
                 Section {
                     ForEach(todayTasks, id: \.objectID) { task in
-                        TaskRowView(task: task, onToggle: toggleCompletion)
+                        TaskRowView(task: task, onToggle: toggleCompletion, onEdit: startEditing)
                     }
                     .onDelete { offsets in
                         deleteTasks(from: todayTasks, at: offsets)
@@ -115,7 +122,7 @@ struct TaskListView: View {
             if !upcomingTasks.isEmpty {
                 Section {
                     ForEach(upcomingTasks, id: \.objectID) { task in
-                        TaskRowView(task: task, onToggle: toggleCompletion)
+                        TaskRowView(task: task, onToggle: toggleCompletion, onEdit: startEditing)
                     }
                     .onDelete { offsets in
                         deleteTasks(from: upcomingTasks, at: offsets)
@@ -130,7 +137,7 @@ struct TaskListView: View {
             if !completedTasks.isEmpty {
                 Section {
                     ForEach(completedTasks, id: \.objectID) { task in
-                        TaskRowView(task: task, onToggle: toggleCompletion)
+                        TaskRowView(task: task, onToggle: toggleCompletion, onEdit: startEditing)
                     }
                     .onDelete { offsets in
                         deleteTasks(from: completedTasks, at: offsets)
@@ -162,11 +169,18 @@ struct TaskListView: View {
             print("Delete error: \(error.localizedDescription)")
         }
     }
+
+    private func startEditing(task: TaskItem) {
+        selectedTaskForEdit = task
+        showingEditTask = true
+    }
 }
 
 struct TaskRowView: View {
     let task: TaskItem
     let onToggle: (TaskItem) -> Void
+    let onEdit: (TaskItem) -> Void
+    private let dueSoonThreshold: TimeInterval = 3 * 60 * 60
 
     private var categoryEmoji: String {
         switch task.category {
@@ -175,6 +189,24 @@ struct TaskRowView: View {
         case "Home":   return "🏠"
         case "Travel": return "✈️"
         default:       return "📌"
+        }
+    }
+
+    private var statusLabel: String {
+        if task.isCompleted { return "Completed" }
+        guard let due = task.dueDate else { return "No Date" }
+        let now = Date()
+        if due < now { return "Overdue" }
+        if due.timeIntervalSince(now) <= dueSoonThreshold { return "Due Soon" }
+        return "Upcoming"
+    }
+
+    private var statusColor: Color {
+        switch statusLabel {
+        case "Completed": return .green
+        case "Overdue": return .red
+        case "Due Soon": return .orange
+        default: return .blue
         }
     }
 
@@ -208,11 +240,23 @@ struct TaskRowView: View {
                     Text(dueDateText)
                         .font(.caption)
                         .foregroundColor(.secondary)
+                    Text(statusLabel)
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2)
+                        .background(statusColor.opacity(0.15))
+                        .foregroundColor(statusColor)
+                        .clipShape(Capsule())
                 }
             }
             Spacer()
         }
         .padding(.vertical, 4)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onEdit(task)
+        }
     }
 }
 
