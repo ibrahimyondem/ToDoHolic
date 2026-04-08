@@ -10,7 +10,9 @@ struct EditTaskView: View {
     @State private var taskTitle: String
     @State private var dueDate: Date
     @State private var selectedCategory: String
-    @State private var showingValidationAlert: Bool = false
+    @State private var showingAlert: Bool = false
+    @State private var alertTitle: String = ""
+    @State private var alertMessage: String = ""
 
     private let categories = ["Work", "Study", "Home", "Travel"]
 
@@ -74,10 +76,10 @@ struct EditTaskView: View {
                     }
                 }
             }
-            .alert("Missing Title", isPresented: $showingValidationAlert) {
+            .alert(alertTitle, isPresented: $showingAlert) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text("Please enter a title before saving.")
+                Text(alertMessage)
             }
         }
     }
@@ -85,7 +87,9 @@ struct EditTaskView: View {
     private func saveChanges() {
         let trimmedTitle = taskTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedTitle.isEmpty else {
-            showingValidationAlert = true
+            alertTitle = "Missing Title"
+            alertMessage = "Please enter a title before saving."
+            showingAlert = true
             return
         }
 
@@ -97,7 +101,9 @@ struct EditTaskView: View {
             try viewContext.save()
             dismiss()
         } catch {
-            print("Edit save error: \(error.localizedDescription)")
+            alertTitle = "Save Failed"
+            alertMessage = "Your task changes could not be saved. Please try again."
+            showingAlert = true
         }
     }
 }

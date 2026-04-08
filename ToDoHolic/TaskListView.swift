@@ -12,6 +12,10 @@ struct TaskListView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @State private var selectedTaskForEdit: TaskItem?
     @State private var showingEditTask = false
+    @State private var showingDeleteConfirmation = false
+    @State private var tasksPendingDelete: [TaskItem] = []
+    @State private var showingErrorAlert = false
+    @State private var errorMessage = ""
 
     @FetchRequest(
         sortDescriptors: [NSSortDescriptor(keyPath: \TaskItem.dueDate, ascending: true)],
@@ -69,6 +73,17 @@ struct TaskListView: View {
                 EditTaskView(task: task)
             }
         }
+        .confirmationDialog("Delete selected task(s)?", isPresented: $showingDeleteConfirmation, titleVisibility: .visible) {
+            Button("Delete", role: .destructive) {
+                performPendingDelete()
+            }
+            Button("Cancel", role: .cancel) {}
+        }
+        .alert("Action Failed", isPresented: $showingErrorAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(errorMessage)
+        }
     }
 
     private var emptyStateView: some View {
@@ -95,7 +110,7 @@ struct TaskListView: View {
                         TaskRowView(task: task, onToggle: toggleCompletion, onEdit: startEditing)
                     }
                     .onDelete { offsets in
-                        deleteTasks(from: overdueTasks, at: offsets)
+                        requestDelete(from: overdueTasks, at: offsets)
                     }
                 } header: {
                     Label("Overdue", systemImage: "exclamationmark.circle.fill")
@@ -110,7 +125,7 @@ struct TaskListView: View {
                         TaskRowView(task: task, onToggle: toggleCompletion, onEdit: startEditing)
                     }
                     .onDelete { offsets in
-                        deleteTasks(from: todayTasks, at: offsets)
+                        requestDelete(from: todayTasks, at: offsets)
                     }
                 } header: {
                     Label("Today", systemImage: "calendar")
@@ -125,7 +140,7 @@ struct TaskListView: View {
                         TaskRowView(task: task, onToggle: toggleCompletion, onEdit: startEditing)
                     }
                     .onDelete { offsets in
-                        deleteTasks(from: upcomingTasks, at: offsets)
+                        requestDelete(from: upcomingTasks, at: offsets)
                     }
                 } header: {
                     Label("Upcoming", systemImage: "clock")
@@ -140,7 +155,7 @@ struct TaskListView: View {
                         TaskRowView(task: task, onToggle: toggleCompletion, onEdit: startEditing)
                     }
                     .onDelete { offsets in
-                        deleteTasks(from: completedTasks, at: offsets)
+                        requestDelete(from: completedTasks, at: offsets)
                     }
                 } header: {
                     Label("Completed", systemImage: "checkmark.circle.fill")
@@ -157,16 +172,25 @@ struct TaskListView: View {
         do {
             try viewContext.save()
         } catch {
-            print("Toggle save error: \(error.localizedDescription)")
+            task.isCompleted.toggle()
+            errorMessage = "Could not update task status. Please try again."
+            showingErrorAlert = true
         }
     }
 
-    private func deleteTasks(from section: [TaskItem], at offsets: IndexSet) {
-        offsets.map { section[$0] }.forEach(viewContext.delete)
+    private func requestDelete(from section: [TaskItem], at offsets: IndexSet) {
+        tasksPendingDelete = offsets.map { section[$0] }
+        showingDeleteConfirmation = !tasksPendingDelete.isEmpty
+    }
+
+    private func performPendingDelete() {
+        tasksPendingDelete.forEach(viewContext.delete)
         do {
             try viewContext.save()
+            tasksPendingDelete.removeAll()
         } catch {
-            print("Delete error: \(error.localizedDescription)")
+            errorMessage = "Could not delete task(s). Please try again."
+            showingErrorAlert = true
         }
     }
 

@@ -15,7 +15,9 @@ struct AddTaskView: View {
     @State private var taskTitle: String = ""
     @State private var dueDate: Date = Date()
     @State private var selectedCategory: String = "Work"
-    @State private var showingValidationAlert: Bool = false
+    @State private var showingAlert: Bool = false
+    @State private var alertTitle: String = ""
+    @State private var alertMessage: String = ""
 
     let categories = ["Work", "Study", "Home", "Travel"]
 
@@ -90,10 +92,10 @@ struct AddTaskView: View {
                     }
                 }
             }
-            .alert("Missing Title", isPresented: $showingValidationAlert) {
+            .alert(alertTitle, isPresented: $showingAlert) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text("Please enter a title for your task before saving.")
+                Text(alertMessage)
             }
         }
     }
@@ -101,7 +103,9 @@ struct AddTaskView: View {
     private func saveTask() {
         let trimmedTitle = taskTitle.trimmingCharacters(in: .whitespaces)
         guard !trimmedTitle.isEmpty else {
-            showingValidationAlert = true
+            alertTitle = "Missing Title"
+            alertMessage = "Please enter a title for your task before saving."
+            showingAlert = true
             return
         }
 
@@ -116,7 +120,9 @@ struct AddTaskView: View {
             try viewContext.save()
             dismiss()
         } catch {
-            print("Core Data save error: \(error.localizedDescription)")
+            alertTitle = "Save Failed"
+            alertMessage = "Your task could not be saved. Please try again."
+            showingAlert = true
         }
     }
 }
