@@ -81,12 +81,6 @@ struct DashboardView: View {
                                 count: count(for: "Travel"), subtitle: subtitle(for: "Travel"))
                         }
                         .buttonStyle(PlainButtonStyle())
-
-                        NavigationLink(destination: TaskListView(filterCategory: "Music")) {
-                            CategoryCard(emoji: "🎵", title: "Music",
-                                count: count(for: "Music"), subtitle: subtitle(for: "Music"))
-                        }
-                        .buttonStyle(PlainButtonStyle())
                     }
 
                     // TODAY section — now shows real tasks
