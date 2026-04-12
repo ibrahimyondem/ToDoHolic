@@ -4,18 +4,24 @@ import CoreData
 
 struct DashboardView: View {
     @AppStorage("userName") private var userName: String = ""
+    @AppStorage("taskCustomCategoriesVersion") private var categoryListVersion = 0
     @Environment(\.managedObjectContext) private var viewContext
     @State private var showingAddTask = false
+    @State private var showingAddCategory = false
 
     @FetchRequest(sortDescriptors: [])
     private var allTasks: FetchedResults<TaskItem>
+
+    private var dashboardCategories: [String] {
+        _ = categoryListVersion
+        return TaskCategories.allCategories()
+    }
 
     let columns = [
         GridItem(.flexible(), spacing: 16),
         GridItem(.flexible(), spacing: 16)
     ]
 
-    // Helpers to compute real counts per category
     private func count(for category: String) -> Int {
         allTasks.filter { $0.category == category && !$0.isCompleted }.count
     }
@@ -51,39 +57,45 @@ struct DashboardView: View {
                                 .tracking(-1)
                         }
                         Spacer()
-                        Image(systemName: "person.circle")
-                            .font(.title)
-                            .foregroundColor(.gray)
+                        NavigationLink(destination: ProfileView()) {
+                            Image(systemName: "person.circle")
+                                .font(.title)
+                                .foregroundColor(.gray)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Profile")
                     }
                     .padding(.top, 20)
 
-                    LazyVGrid(columns: columns, spacing: 16) {
-                        NavigationLink(destination: TaskListView(filterCategory: "Work")) {
-                            CategoryCard(emoji: "💼", title: "Work",
-                                count: count(for: "Work"), subtitle: subtitle(for: "Work"))
+                    HStack(alignment: .firstTextBaseline) {
+                        Text("CATEGORIES")
+                            .font(.caption)
+                            .fontWeight(.bold)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Button {
+                            showingAddCategory = true
+                        } label: {
+                            Label("Add category", systemImage: "plus.circle.fill")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
                         }
-                        .buttonStyle(PlainButtonStyle())
-
-                        NavigationLink(destination: TaskListView(filterCategory: "Study")) {
-                            CategoryCard(emoji: "📚", title: "Study",
-                                count: count(for: "Study"), subtitle: subtitle(for: "Study"))
-                        }
-                        .buttonStyle(PlainButtonStyle())
-
-                        NavigationLink(destination: TaskListView(filterCategory: "Home")) {
-                            CategoryCard(emoji: "🏠", title: "Home",
-                                count: count(for: "Home"), subtitle: subtitle(for: "Home"))
-                        }
-                        .buttonStyle(PlainButtonStyle())
-
-                        NavigationLink(destination: TaskListView(filterCategory: "Travel")) {
-                            CategoryCard(emoji: "✈️", title: "Travel",
-                                count: count(for: "Travel"), subtitle: subtitle(for: "Travel"))
-                        }
-                        .buttonStyle(PlainButtonStyle())
                     }
 
-                    // TODAY section — now shows real tasks
+                    LazyVGrid(columns: columns, spacing: 16) {
+                        ForEach(dashboardCategories, id: \.self) { category in
+                            NavigationLink(destination: TaskListView(filterCategory: category)) {
+                                CategoryCard(
+                                    emoji: TaskCategories.emoji(for: category),
+                                    title: category,
+                                    count: count(for: category),
+                                    subtitle: subtitle(for: category)
+                                )
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        }
+                    }
+
                     VStack(alignment: .leading, spacing: 12) {
                         Text("TODAY")
                             .font(.caption)
@@ -147,10 +159,119 @@ struct DashboardView: View {
         .sheet(isPresented: $showingAddTask) {
             AddTaskView()
         }
+        .sheet(isPresented: $showingAddCategory) {
+            AddCategorySheet()
+        }
     }
 }
 
-// CategoryCard — unchanged from original, but moved here for better organization
+private struct AddCategorySheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var newCategoryName = ""
+    @State private var validationMessage: String?
+
+    var body: some View {
+        NavigationView {
+            List {
+                Section {
+                    TextField("Category name", text: $newCategoryName)
+                        .autocapitalization(.words)
+                } footer: {
+                    if let validationMessage {
+                        Text(validationMessage)
+                            .foregroundColor(.red)
+                    }
+                }
+            }
+            .listStyle(.insetGrouped)
+            .navigationTitle("Add category")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Add") {
+                        if let error = TaskCategories.addCustom(newCategoryName) {
+                            validationMessage = error
+                        } else {
+                            dismiss()
+                        }
+                    }
+                    .fontWeight(.semibold)
+                }
+            }
+            .onChange(of: newCategoryName) { _ in
+                validationMessage = nil
+            }
+        }
+    }
+}
+
+struct ProfileView: View {
+    @AppStorage("userName") private var userName: String = ""
+
+    @FetchRequest(sortDescriptors: [])
+    private var allTasks: FetchedResults<TaskItem>
+
+    @State private var editedName: String = ""
+
+    private var activeCount: Int {
+        allTasks.filter { !$0.isCompleted }.count
+    }
+
+    private var completedCount: Int {
+        allTasks.filter { $0.isCompleted }.count
+    }
+
+    var body: some View {
+        List {
+            Section {
+                HStack {
+                    Spacer()
+                    Image(systemName: "person.circle.fill")
+                        .font(.system(size: 72))
+                        .foregroundColor(.blue)
+                    Spacer()
+                }
+                .listRowBackground(Color.clear)
+            }
+
+            Section(
+                header: Text("Display name"),
+                footer: Text("Used for the Hi line on the home screen.")
+            ) {
+                TextField("Your name", text: $editedName)
+                    .autocapitalization(.words)
+            }
+
+            Section(header: Text("Task overview")) {
+                LabeledContent("Active", value: "\(activeCount)")
+                LabeledContent("Completed", value: "\(completedCount)")
+                LabeledContent("Total", value: "\(allTasks.count)")
+            }
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle("Profile")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Save") {
+                    let trimmed = editedName.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard !trimmed.isEmpty else { return }
+                    userName = trimmed
+                }
+                .disabled(editedName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+        .onAppear {
+            editedName = userName
+        }
+    }
+}
+
 struct CategoryCard: View {
     let emoji: String
     let title: String

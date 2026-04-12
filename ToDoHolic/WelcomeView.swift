@@ -1,7 +1,6 @@
 import SwiftUI
 
-//Create by Ibrahim Yondem and Baris Isci
-//Welcome Screen
+// Ibrahim Yondem & Baris Isci — welcome screen
 
 struct WelcomeView: View {
     @AppStorage("userName") private var storedName: String = ""
@@ -12,7 +11,7 @@ struct WelcomeView: View {
     }
     
     var body: some View {
-        NavigationView{
+        NavigationView {
             VStack(alignment: .leading, spacing: 20) {
                 Spacer()
                 

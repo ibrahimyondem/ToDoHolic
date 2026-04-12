@@ -7,7 +7,7 @@ ToDoHolic is an iOS task management app built with SwiftUI and CoreData for COMP
 - Baris Isci (101531238)
 
 ## Features
-- Launch screen with app name and team members
+- Launch screen (logo on white)
 - Welcome screen that stores the user's name locally
 - Dashboard with emoji categories and task counts
 - Add task screen with title, due date/time, and category selection
