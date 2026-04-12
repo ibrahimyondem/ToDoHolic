@@ -12,6 +12,8 @@ struct AddTaskView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
 
+    @AppStorage("taskCustomCategoriesVersion") private var categoryListVersion = 0
+
     @State private var taskTitle: String = ""
     @State private var dueDate: Date = Date()
     @State private var selectedCategory: String = "Work"
@@ -19,16 +21,9 @@ struct AddTaskView: View {
     @State private var alertTitle: String = ""
     @State private var alertMessage: String = ""
 
-    let categories = ["Work", "Study", "Home", "Travel"]
-
-    private func emoji(for category: String) -> String {
-        switch category {
-        case "Work":   return "💼"
-        case "Study":  return "📚"
-        case "Home":   return "🏠"
-        case "Travel": return "✈️"
-        default:       return "📌"
-        }
+    private var categories: [String] {
+        _ = categoryListVersion
+        return TaskCategories.allCategories()
     }
 
     var body: some View {
@@ -43,6 +38,7 @@ struct AddTaskView: View {
                     DatePicker(
                         "Select date",
                         selection: $dueDate,
+                        in: Date()...,
                         displayedComponents: [.date, .hourAndMinute]
                     )
                     .datePickerStyle(.compact)
@@ -51,14 +47,13 @@ struct AddTaskView: View {
                 Section(header: Text("Category")) {
                     Picker("Category", selection: $selectedCategory) {
                         ForEach(categories, id: \.self) { cat in
-                            Text(cat).tag(cat)
+                            Text("\(TaskCategories.emoji(for: cat))  \(cat)").tag(cat)
                         }
                     }
-                    .pickerStyle(.segmented)
 
                     HStack {
                         Spacer()
-                        Text(emoji(for: selectedCategory))
+                        Text(TaskCategories.emoji(for: selectedCategory))
                             .font(.largeTitle)
                         Spacer()
                     }
@@ -97,6 +92,16 @@ struct AddTaskView: View {
             } message: {
                 Text(alertMessage)
             }
+            .onAppear {
+                if !categories.contains(selectedCategory) {
+                    selectedCategory = categories.first ?? "Work"
+                }
+            }
+            .onChange(of: categoryListVersion) { _ in
+                if !categories.contains(selectedCategory) {
+                    selectedCategory = categories.first ?? "Work"
+                }
+            }
         }
     }
 
@@ -105,6 +110,14 @@ struct AddTaskView: View {
         guard !trimmedTitle.isEmpty else {
             alertTitle = "Missing Title"
             alertMessage = "Please enter a title for your task before saving."
+            showingAlert = true
+            return
+        }
+
+        let now = Date()
+        guard dueDate >= now else {
+            alertTitle = "Invalid Due Date"
+            alertMessage = "Choose a date and time in the present or future."
             showingAlert = true
             return
         }

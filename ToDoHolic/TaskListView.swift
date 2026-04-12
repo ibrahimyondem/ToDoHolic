@@ -8,10 +8,14 @@
 import SwiftUI
 import CoreData
 
+private struct TaskEditSheetItem: Identifiable {
+    let id: NSManagedObjectID
+    let task: TaskItem
+}
+
 struct TaskListView: View {
     @Environment(\.managedObjectContext) private var viewContext
-    @State private var selectedTaskForEdit: TaskItem?
-    @State private var showingEditTask = false
+    @State private var taskToEdit: TaskEditSheetItem?
     @State private var showingDeleteConfirmation = false
     @State private var tasksPendingDelete: [TaskItem] = []
     @State private var showingErrorAlert = false
@@ -68,10 +72,8 @@ struct TaskListView: View {
         }
         .navigationTitle(filterCategory ?? "All Tasks")
         .navigationBarTitleDisplayMode(.large)
-        .sheet(isPresented: $showingEditTask) {
-            if let task = selectedTaskForEdit {
-                EditTaskView(task: task)
-            }
+        .sheet(item: $taskToEdit) { item in
+            EditTaskView(task: item.task)
         }
         .confirmationDialog("Delete selected task(s)?", isPresented: $showingDeleteConfirmation, titleVisibility: .visible) {
             Button("Delete", role: .destructive) {
@@ -91,10 +93,14 @@ struct TaskListView: View {
             Image(systemName: "checkmark.circle")
                 .font(.system(size: 60))
                 .foregroundColor(.secondary)
-            Text("No tasks yet")
+            Text(filterCategory == nil ? "No tasks yet" : "No tasks here")
                 .font(.title2)
                 .fontWeight(.semibold)
-            Text("Tap the '+' button on the dashboard\nto add your first task.")
+            Text(
+                filterCategory == nil
+                    ? "Tap the '+' button on the dashboard\nto add your first task."
+                    : "Add a task from the dashboard and choose\nthis category, or pick another category."
+            )
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -189,14 +195,15 @@ struct TaskListView: View {
             try viewContext.save()
             tasksPendingDelete.removeAll()
         } catch {
+            viewContext.rollback()
+            tasksPendingDelete.removeAll()
             errorMessage = "Could not delete task(s). Please try again."
             showingErrorAlert = true
         }
     }
 
     private func startEditing(task: TaskItem) {
-        selectedTaskForEdit = task
-        showingEditTask = true
+        taskToEdit = TaskEditSheetItem(id: task.objectID, task: task)
     }
 }
 
@@ -207,13 +214,7 @@ struct TaskRowView: View {
     private let dueSoonThreshold: TimeInterval = 3 * 60 * 60
 
     private var categoryEmoji: String {
-        switch task.category {
-        case "Work":   return "💼"
-        case "Study":  return "📚"
-        case "Home":   return "🏠"
-        case "Travel": return "✈️"
-        default:       return "📌"
-        }
+        TaskCategories.emoji(for: task.category ?? "")
     }
 
     private var statusLabel: String {
